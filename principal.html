@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CONAVERSE</title>
+
+  <!-- Firebase compat libs (incluye storage) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ====== RESET / BASE ====== */
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:'Roboto',sans-serif;background:#f0f2f5;color:#222;
+    }
+
+    /* ====== NAV BAR (pestañas) ====== */
+    .topbar{
+      background:#ffffff;border-bottom:1px solid #e6e6e6;display:flex;align-items:center;justify-content:space-between;padding:8px 18px;position:sticky;top:0;z-index:60;
+      box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{height:48px;border-radius:6px}
+    .tabs{display:flex;gap:8px;align-items:center}
+    .tab{
+      padding:10px 14px;border-radius:8px;background:transparent;border:none;cursor:pointer;font-weight:600;color:#333;
+    }
+    .tab.active{background:#006341;color:white;box-shadow:0 4px 8px rgba(0,0,0,0.08)}
+
+    /* ====== LAYOUT ====== */
+    .container{max-width:1200px;margin:20px auto;display:grid;grid-template-columns:320px 1fr 320px;gap:20px;padding:0 12px}
+    @media(max-width:1000px){.container{grid-template-columns:1fr;}.right-column,.left-column{order:2}}
+
+    /* ====== LEFT / RIGHT COLUMN cards (info/galería) ====== */
+    .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .left-column .card img{max-width:100%;display:block;border-radius:8px}
+
+    /* ====== FEED / POST COMPOSER ====== */
+    .composer{background:white;border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,0.06);margin-bottom:16px;}
+    .composer-top{display:flex;gap:12px;align-items:flex-start}
+    .avatar{width:48px;height:48px;border-radius:50%;background:#ddd;display:inline-block}
+    .composer-input{flex:1}
+    #post-text{width:100%;min-height:70px;border-radius:10px;border:1px solid #e6e6e6;padding:10px;font-size:15px;resize:vertical}
+    .composer-actions{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+    .attach-btn{display:flex;gap:8px;align-items:center}
+    .btn{
+      background:#006341;color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600
+    }
+    .btn.secondary{background:transparent;color:#006341;border:1px solid #006341}
+    input[type=file]{display:none}
+
+    .preview-area{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+    .file-preview{border-radius:8px;padding:6px;background:#fafafa;border:1px solid #ececec;display:flex;align-items:center;gap:8px}
+    .file-preview img{max-width:140px;max-height:120px;border-radius:6px}
+    .file-preview video{max-width:200px;max-height:140px;border-radius:6px}
+    .progress{height:8px;background:#e6e6e6;border-radius:8px;width:100%;overflow:hidden;margin-top:8px}
+    .progress > i{display:block;height:100%;background:#006341;width:0%}
+
+    /* ====== POST CARD ====== */
+    .post{background:white;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
+    .post .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .post .meta .left{display:flex;gap:10px;align-items:center}
+    .post .meta .left .name{font-weight:700}
+    .post .body{font-size:15px;margin-bottom:10px;white-space:pre-wrap}
+    .post .media{margin-top:8px}
+    .post .actions{display:flex;gap:12px;margin-top:10px;color:#555;font-weight:600}
+
+    /* small tweaks */
+    h1.page-title{text-align:center;color:#006341;font-family:'Poppins',sans-serif;margin:10px 0}
+    .empty-message{text-align:center;padding:18px;color:#666}
+
+    /* ==== CHATBOT AsisConalep moderno ==== */
+    #chatbot-container {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 320px;
+      max-height: 480px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 999;
+      animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+    #chatbot-header {
+      background: #006341;
+      color: white;
+      padding: 12px;
+      font-weight: 600;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    #chatbot-messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      font-family: 'Roboto', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      max-width: 85%;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border-radius: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .bot-message {
+      background: #e7f3ee;
+      color: #222;
+      align-self: flex-start;
+      border-top-left-radius: 0;
+    }
+
+    .user-message {
+      background: #006341;
+      color: #fff;
+      align-self: flex-end;
+      border-top-right-radius: 0;
+    }
+
+    #chatbot-input-area {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    #chatbot-input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
+    #chatbot-send {
+      background: #006341;
+      border: none;
+      color: white;
+      padding: 0 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #chatbot-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #006341;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 999;
+    }
+    #chatbot-btn img {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+    }
+    .typing {
+      font-style: italic;
+      color: #777;
+      font-size: 13px;
+      margin-bottom: 8px;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- TOPBAR con pestañas -->
+  <div class="topbar">
+    <div class="brand">
+      <img src="logoq.jpeg" alt="logo">
+      <div>
+        <div style="font-weight:700">CONALEP 165 Tuxpan</div>
+        <div style="font-size:12px;color:#666">Red interna de la comunidad</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Navegación">
+      <button class="tab active" data-tab="inicio" onclick="switchTab('inicio')">Inicio</button>
+      <button class="tab" data-tab="direccion" onclick="switchTab('direccion')">Dirección</button>
+      <button class="tab" data-tab="archivos" onclick="switchTab('archivos')">Archivos</button>
+      <button class="tab" data-tab="promocion" onclick="switchTab('promocion')">Promoción</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- LEFT: información / mapa / quick links -->
+    <div class="left-column">
+      <div class="card">
+        <h3 style="margin-top:0">Ubicación</h3>
+        <p style="margin:0 0 12px 0">Calle 2da general silva, Tuxpan, Veracruz</p>
+        <img src="ubi.png" alt="ubicación">
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-top:0">Galería rápida</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <img src="CAR.jpeg" style="width:92px;height:72px;object-fit:cover;border-radius:6px">
+          <img src="F1.png" style="width:92px;height:72px;object-fit:cover;border-radius:6px">
+          <img src="m1.jpeg" style="width:92px;height:72px;object-fit:cover;border-radius:6px">
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: FEED -->
+    <main class="center-column">
+      <h1 class="page-title">PRINCIPAL</h1>
+
+      <!-- Composer (publicación) -->
+      <section class="composer card" id="composer-section">
+        <div class="composer-top">
+          <div class="avatar" title="Tu avatar"></div>
+          <div class="composer-input">
+            <textarea id="post-text" placeholder="¿Qué quieres compartir hoy?"></textarea>
+
+            <!-- Attach controls -->
+            <div class="composer-actions">
+              <div class="attach-btn">
+                <label class="tab secondary" title="Adjuntar archivo" for="file-input">Adjuntar</label>
+                <input id="file-input" type="file" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <button class="tab secondary" id="btn-location" onclick="addLocation()">Dirección</button>
+                <button class="tab secondary" id="btn-promo" onclick="markPromotion()">Promoción</button>
+              </div>
+
+              <div>
+                <button class="btn" id="publish-btn">Publicar</button>
+              </div>
+            </div>
+
+            <!-- preview + progress -->
+            <div class="preview-area" id="preview-area" aria-live="polite"></div>
+            <div class="progress" id="upload-progress" style="display:none"><i></i></div>
+            <div id="composer-error" class="empty-message" style="color:#d9534f;display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Feed -->
+      <section id="feed" class="card" style="padding:12px 16px;">
+        <div id="posts-list">
+          <div class="empty-message">Cargando publicaciones...</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- RIGHT: extra / contactos -->
+    <aside class="right-column">
+      <div class="card">
+        <h3 style="margin-top:0">Contacto</h3>
+        <p style="margin:0">Email: conalep165@conalep.edu.mx</p>
+        <p style="margin:0">Teléfono: 783 cesar menso xdd</p>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="margin-top:0">Preguntas frecuentes</h3>
+        <ul style="padding-left:18px;margin:6px 0 0 0;color:#555">
+          <li>¿Qué carreras ofrecen?</li>
+          <li>¿Horario de atención?</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Botón flotante del chatbot -->
+  <div id="chatbot-btn" title="Habla con AsisConalep">
+    <img src="logocona3.png" alt="AsisConalep">
+  </div>
+
+  <!-- Ventana del chatbot -->
+  <div id="chatbot-container">
+    <div id="chatbot-header">🤖 AsisConalep</div>
+    <div id="chatbot-messages"></div>
+    <div id="chatbot-input-area">
+      <input type="text" id="chatbot-input" placeholder="Escribe tu mensaje...">
+      <button id="chatbot-send">Enviar</button>
+    </div>
+  </div>
+
+  <!-- SCRIPTS: Firebase + lógica -->
+  <script>
+    // === Firebase config (usa la tuya, dejé la que venía en el archivo original) ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyCt7bQO-WAKxxtGRMrRRQ-JEgB9XQARTSU",
+      authDomain: "undertale-web.firebaseapp.com",
+      databaseURL: "https://undertale-web-default-rtdb.firebaseio.com",
+      projectId: "undertale-web",
+      storageBucket: "undertale-web.firebasestorage.app",
+      messagingSenderId: "382838862726",
+      appId: "1:382838862726:web:bef77076da1fca2af6f207"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // util: formatea fechas
+    function formatearFecha(date){
+      const opciones = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'};
+      return new Date(date).toLocaleString('es-MX', opciones);
+    }
+
+    // ---------- Estado del composer ----------
+    const fileInput = document.getElementById('file-input');
+    const previewArea = document.getElementById('preview-area');
+    const publishBtn = document.getElementById('publish-btn');
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadProgressBar = uploadProgress.querySelector('i');
+    const composerError = document.getElementById('composer-error');
+    let selectedFile = null;
+    let isPromotion = false;
+    let addedLocation = null;
+
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0] || null;
+      renderPreview();
+    });
+
+    function renderPreview(){
+      previewArea.innerHTML = '';
+      composerError.style.display = 'none';
+      if(!selectedFile) return;
+      const ext = selectedFile.type;
+      const container = document.createElement('div');
+      container.className = 'file-preview';
+
+      if(ext.startsWith('image/')){
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(selectedFile);
+        img.onload = ()=> URL.revokeObjectURL(img.src);
+        container.appendChild(img);
+      } else if(ext.startsWith('video/')){
+        const vid = document.createElement('video');
+        vid.controls = true;
+        vid.src = URL.createObjectURL(selectedFile);
+        vid.onloadeddata = ()=> URL.revokeObjectURL(vid.src);
+        container.appendChild(vid);
+      } else {
+        // documento / pdf
+        const ico = document.createElement('div');
+        ico.innerHTML = `<strong>${selectedFile.name}</strong>`;
+        container.appendChild(ico);
+      }
+
+      const rm = document.createElement('button');
+      rm.textContent = 'Eliminar';
+      rm.className = 'tab secondary';
+      rm.style.marginLeft = '8px';
+      rm.addEventListener('click', ()=> {
+        selectedFile = null;
+        fileInput.value = '';
+        renderPreview();
+      });
+      container.appendChild(rm);
+      previewArea.appendChild(container);
+    }
+
+    // marcar como promoción
+    function markPromotion(){
+      isPromotion = !isPromotion;
+      const btn = document.getElementById('btn-promo');
+      btn.style.backgroundColor = isPromotion ? '#006341' : 'transparent';
+      btn.style.color = isPromotion ? 'white' : 'inherit';
+    }
+
+    // agregar dirección (ejemplo)
+    function addLocation(){
+      if(!addedLocation){
+        addedLocation = "Calle 2da general silva, Tuxpan";
+        document.getElementById('btn-location').textContent = 'Dirección ✔';
+      } else {
+        addedLocation = null;
+        document.getElementById('btn-location').textContent = 'Dirección';
+      }
+    }
+
+    // publicar post (sube archivo si existe)
+    publishBtn.addEventListener('click', publicarPost);
+    async function publicarPost(){
+      const text = document.getElementById('post-text').value.trim();
+      composerError.style.display = 'none';
+
+      if(!text && !selectedFile){
+        composerError.textContent = 'Escribe algo o adjunta un archivo antes de publicar.';
+        composerError.style.display = 'block';
+        return;
+      }
+
+      publishBtn.disabled = true;
+      uploadProgress.style.display = 'none';
+      uploadProgressBar.style.width = '0%';
+
+      try {
+        let fileUrl = null;
+        let fileMeta = null;
+
+        if(selectedFile){
+          // limit size (ejemplo 20MB)
+          const maxSize = 20 * 1024 * 1024;
+          if(selectedFile.size > maxSize){
+            throw new Error('Archivo demasiado grande. Límite 20MB.');
+          }
+
+          const storageRef = storage.ref().child('posts/' + Date.now() + '_' + selectedFile.name);
+          const uploadTask = storageRef.put(selectedFile);
+
+          uploadProgress.style.display = 'block';
+          uploadProgressBar.style.width = '0%';
+
+          await new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                uploadProgressBar.style.width = progress + '%';
+              },
+              (err) => reject(err),
+              async () => {
+                fileUrl = await storageRef.getDownloadURL();
+                fileMeta = {name:selectedFile.name,type:selectedFile.type,size:selectedFile.size};
+                resolve();
+              }
+            );
+          });
+        }
+
+        // guardar documento en Firestore
+        await db.collection('posts').add({
+          texto: text || '',
+          fileUrl: fileUrl || null,
+          fileMeta: fileMeta || null,
+          isPromotion: !!isPromotion,
+          location: addedLocation || null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // limpiar UI
+        document.getElementById('post-text').value = '';
+        selectedFile = null;
+        fileInput.value = '';
+        renderPreview();
+        isPromotion = false;
+        addedLocation = null;
+        document.getElementById('btn-promo').style.backgroundColor = 'transparent';
+        document.getElementById('btn-promo').style.color = 'inherit';
+        document.getElementById('btn-location').textContent = 'Dirección';
+
+        composerError.style.display = 'none';
+      } catch(err){
+        console.error(err);
+        composerError.textContent = 'Error al publicar: ' + (err.message || err);
+        composerError.style.display = 'block';
+      } finally {
+        publishBtn.disabled = false;
+        uploadProgress.style.display = 'none';
+        uploadProgressBar.style.width = '0%';
+      }
+    }
+
+    // ===== mostrar posts en tiempo real =====
+    const postsList = document.getElementById('posts-list');
+
+    function showPlaceholder(){
+      postsList.innerHTML = '<div class="empty-message">Cargando publicaciones...</div>';
+    }
+    showPlaceholder();
+
+    // tab filter state
+    let currentTab = 'inicio'; // inicio,direccion,archivos,promocion
+    function switchTab(tab){
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+      });
+      
+      // Actualizar título según la pestaña seleccionada
+      const titleElement = document.querySelector('.page-title');
+      switch(tab) {
+        case 'direccion':
+          titleElement.textContent = 'DIRECCIÓN';
+          break;
+        case 'archivos':
+          titleElement.textContent = 'ARCHIVOS';
+          break;
+        case 'promocion':
+          titleElement.textContent = 'PROMOCIÓN';
+          break;
+        default:
+          titleElement.textContent = 'PRINCIPAL';
+      }
+      
+      renderPostsCache(); // refresca vista
+    }
+
+    // cache posts in memory to apply client filters
+    let postsCache = [];
+
+    db.collection('posts').orderBy('createdAt','desc').onSnapshot(snapshot => {
+      postsCache = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        postsCache.push({...data, id:doc.id});
+      });
+      renderPostsCache();
+    }, err => {
+      postsList.innerHTML = '<div class="empty-message">Error al cargar publicaciones.</div>';
+      console.error(err);
+    });
+
+    function renderPostsCache(){
+      if(!postsCache.length){
+        postsList.innerHTML = '<div class="empty-message">Aún no hay publicaciones. Sé el primero en compartir.</div>';
+        return;
+      }
+
+      // apply filter by tab
+      let filtered = postsCache.slice();
+      
+      if(currentTab === 'archivos'){
+        filtered = filtered.filter(p => p.fileUrl);
+      } else if(currentTab === 'promocion'){
+        filtered = filtered.filter(p => p.isPromotion);
+      } else if(currentTab === 'direccion'){
+        filtered = filtered.filter(p => p.location);
+      }
+
+      if(!filtered.length){
+        postsList.innerHTML = '<div class="empty-message">No hay publicaciones para esta sección.</div>';
+        return;
+      }
+
+      postsList.innerHTML = '';
+      filtered.forEach(p => {
+        const postEl = document.createElement('article');
+        postEl.className = 'post';
+
+        const createdAt = p.createdAt && p.createdAt.seconds ? p.createdAt.toDate() : (p.createdAt ? new Date(p.createdAt) : new Date());
+
+        postEl.innerHTML = `
+          <div class="meta">
+            <div class="left">
+              <div class="avatar" style="width:40px;height:40px"></div>
+              <div>
+                <div class="name">Usuario CONALEP</div>
+                <div style="font-size:12px;color:#777">${formatearFecha(createdAt)}</div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:${p.isPromotion ? '#d9534f' : '#666'};font-weight:700">
+              ${p.isPromotion ? 'PROMOCIÓN' : ''}
+            </div>
+          </div>
+          <div class="body">${escapeHtml(p.texto || '')}</div>
+        `;
+
+        // location
+        if(p.location){
+          const loc = document.createElement('div');
+          loc.style.fontSize = '13px';
+          loc.style.color = '#006341';
+          loc.style.marginTop = '8px';
+          loc.textContent = '📍 ' + p.location;
+          postEl.querySelector('.body').appendChild(loc);
+        }
+
+        // media
+        if(p.fileUrl){
+          const media = document.createElement('div');
+          media.className = 'media';
+          const type = p.fileMeta && p.fileMeta.type ? p.fileMeta.type : '';
+
+          if(type.startsWith('image/')){
+            const img = document.createElement('img');
+            img.src = p.fileUrl;
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '8px';
+            media.appendChild(img);
+          } else if(type.startsWith('video/')){
+            const v = document.createElement('video');
+            v.controls = true;
+            v.src = p.fileUrl;
+            v.style.width = '100%';
+            v.style.borderRadius = '8px';
+            media.appendChild(v);
+          } else {
+            const link = document.createElement('a');
+            link.href = p.fileUrl;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = (p.fileMeta && p.fileMeta.name) ? 'Abrir archivo: ' + p.fileMeta.name : 'Abrir archivo';
+            link.style.display = 'inline-block';
+            link.style.marginTop = '8px';
+            media.appendChild(link);
+          }
+          postEl.appendChild(media);
+        }
+
+        // actions (like / comment placeholders)
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        actions.innerHTML = `<span style="cursor:pointer">Me gusta</span> <span style="cursor:pointer">Comentar</span> <span style="cursor:pointer">Compartir</span>`;
+        postEl.appendChild(actions);
+
+        postsList.appendChild(postEl);
+      });
+    }
+
+    // básica función para evitar inyección simple
+    function escapeHtml(text){
+      if(!text) return '';
+      return text.replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+    }
+
+    // iniciar en pestaña inicio
+    switchTab('inicio');
+
+    // Chatbot
+    const chatbotBtn = document.getElementById("chatbot-btn");
+    const chatbotContainer = document.getElementById("chatbot-container");
+    const messagesArea = document.getElementById("chatbot-messages");
+    const input = document.getElementById("chatbot-input");
+    const sendBtn = document.getElementById("chatbot-send");
+
+    // --- Diccionario FAQ ---
+    const respuestas = {
+      "hola": "¡Hola! 👋 Soy AsisConalep, tu asistente virtual. ¿En qué puedo ayudarte?",
+      "carreras": "Ofrecemos carreras como Informática, Mecatrónica, Electromecánica, Enfermería, y más. 🎓",
+      "ubicacion": "Nos encontramos en Calle 2da General Silva, Tuxpan, Veracruz 📍",
+      "horario": "El horario de atención es de lunes a viernes de 8:00 a 16:00 horas. 🕒",
+      "director": "El director del plantel es el Ing. Jesús Islas.",
+      "contacto": "Puedes comunicarte al correo conalep165@conalep.edu.mx o al teléfono (xxxx) xxx xxx ☎️",
+      "ayuda": "Puedo responderte sobre carreras, ubicación, contacto y horarios. Escribe alguna palabra clave. 💡",
+      "gracias": "¡De nada! 😊"
+    };
+
+    // --- Funciones ---
+    function appendMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender === "bot" ? "bot-message" : "user-message");
+      msg.textContent = text;
+      messagesArea.appendChild(msg);
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    function botTyping() {
+      const typing = document.createElement("div");
+      typing.classList.add("typing");
+      typing.textContent = "AsisConalep está escribiendo...";
+      messagesArea.appendChild(typing);
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+      return typing;
+    }
+
+    function botResponse(userText) {
+      const text = userText.toLowerCase().trim();
+      let respuesta = respuestas[text] || "No tengo información sobre eso 😅. Escribe 'ayuda' para ver las opciones disponibles.";
+      const typing = botTyping();
+
+      setTimeout(() => {
+        typing.remove();
+        appendMessage(respuesta, "bot");
+      }, 1000);
+    }
+
+    // --- Enviar mensaje ---
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
+
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      appendMessage(text, "user");
+      input.value = "";
+      botResponse(text);
+    }
+
+    // --- Mostrar / ocultar chatbot ---
+    let visible = false;
+    chatbotBtn.addEventListener("click", () => {
+      visible = !visible;
+      chatbotContainer.style.display = visible ? "flex" : "none";
+      if (visible && messagesArea.children.length === 0) {
+        setTimeout(() => appendMessage("¡Hola! 👋 Soy AsisConalep, tu asistente virtual. Escribe 'ayuda' para ver lo que puedo hacer.", "bot"), 200);
+      }
+    });
+  </script>
+</body>
+</html>
