@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de PDFs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fafafa;
+      margin: 40px;
+    }
+    h1 {
+      color: #333;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      margin: 8px 0;
+    }
+    a {
+      text-decoration: none;
+      color: #007BFF;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Archivos PDF disponibles</h1>
+  <ul id="pdf-list">
+    <!-- Aquí aparecerán los enlaces -->
+  </ul>
+
+  <script>
+    // Lista manual de nombres (actualízala cuando agregues nuevos PDFs)
+    const pdfFiles = [
+      "C:\Users\ruru3\3D Objects\pagina del conalep\pagina del conalep\30-524-DR-01 MISIÓN.pdf",
+      "C:\Users\ruru3\3D Objects\pagina del conalep\pagina del conalep\30-524-DR-02 VISIÓN.pdf",
+      "C:\Users\ruru3\3D Objects\pagina del conalep\pagina del conalep\SCGCI-DR-04 POLÍTICA DE LA CALIDAD.pdf"
+    ];
+
+    const list = document.getElementById("pdf-list");
+
+    pdfFiles.forEach(file => {
+      const li = document.createElement("li");
+      li.innerHTML = `<a href="pdfs/${file}" target="_blank">${file}</a>`;
+      list.appendChild(li);
+    });
+  </script>
+</body>
+</html>
